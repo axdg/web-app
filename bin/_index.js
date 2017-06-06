@@ -3,15 +3,12 @@
 // const fs = require('fs');
 // const path = require('path');
 
+const createServer = require('./create_server');
+const createCompiler = require('./create_compiler');
+
 const { parse, adapter, stringify, sequence } = require('@raywhite/pico-dom');
 
 const { app, BrowserWindow } = require('electron')
-const { micro, send, sendError, createError } = require('micro');
-
-const webpack = require('webpack');
-const ExtractTextPlugin = require("extract-text-webpack-plugin");
-const cssnext = require('postcss-cssnext');
-const _import = require('postcss-import');
 
 /**
  * Create the JSONLD metadata for the page.
@@ -74,58 +71,97 @@ createErrorMarkup = function (str = '') {
   );
 }
 
-/**
- * Creates a webpack compiler instance with
- * the specified config.
- *
- * @returns {Object}
- */
-const createCompiler = function (production = false) {
-  // TODO: Add babel config here.
-  return wepback({
-    entry: '../src/index.js',
-    output: {
-      filename: '[name].packed.js',
-      path: path.join(__dirname),
-      publicPath: ('/assets/'),
-    },
-    module: {
-      rules: [
-        {
-          test: /.md$/,
-          loader: 'raw-loader',
-        },
-        {
-          test: /\.css$/,
-          use: ExtractTextPlugin.extract({
-            fallback: 'style-loader',
-            use: [
-              'css-loader',
-              {
-                loader: 'postcss-loader',
-                options: {
-                  // TODO: Add minification to CSS assets.
-                  plugins: () => [_import({}), cssnext({})],
-                }
+const createCompiler = (function () {
+  const webpack = require('webpack');
+  const ExtractTextPlugin = require("extract-text-webpack-plugin");
+
+  /**
+   * Creates a webpack compiler instance with
+   * the specified config.
+   *
+   * @param {Boolean}
+    *
+   * @returns {Object}
+   */
+  return function (production = false) {
+    return wepback({
+      entry: '../src/index.js',
+      output: {
+        filename: '[name].packed.js',
+        path: path.join(__dirname),
+        publicPath: ('/assets/'),
+      },
+      module: {
+        rules: [
+          {
+            /**
+             * JS is transpiled through babel.
+             */
+            test: /\.js$/,
+            exclude: /(node_modules|bin)/,
+            use: {
+              loader: 'babel-loader',
+              options: {
+                presets: ['latest', 'stage-2'],
+                plugins: [
+                  require('babel-plugin-transform-class-properties'),
+                  require('babel-plugin-transform-object-assign'),
+                  require('babel-plugin-transform-es2015-block-scoping'),
+                  require('babel-plugin-transform-react-jsx'),
+                ]
               }
-            ],
-          })
-        },
-        {
-          test: /\.(eot|svg|ttf|woff|woff2)$/,
-          loader: 'file-loader?name=public/fonts/[name].[ext]'
-        }
+            }
+          },
+          {
+            /**
+             * Automatic inlining of markdown files when they
+             * are required.
+             */
+            test: /.md$/,
+            loader: 'raw-loader',
+          },
+          {
+            /**
+             * CSS setup is simple, it just inlines imports
+             * and applies transformation of future syntax.
+             */
+            test: /\.css$/,
+            use: ExtractTextPlugin.extract({
+              fallback: 'style-loader',
+              use: [
+                'css-loader',
+                {
+                  loader: 'postcss-loader',
+                  options: {
+                    // TODO: Add minification to CSS assets (in prod).
+                    plugins: () => [
+                      require('postcss-import')({})),
+                      require('postcss-cssnext')({}),
+                    ],
+                  }
+                }
+              ],
+            })
+          },
+          {
+            /**
+             * Font are pulled out of the source and moved.
+             */
+            test: /\.(eot|svg|ttf|woff|woff2)$/,
+            loader: 'file-loader?name=public/fonts/[name].[ext]'
+          }
+        ],
+      },
+      plugins: [
+        new ExtractTextPlugin('[name].packed.css'),
       ],
-    },
-    plugins: [
-      new ExtractTextPlugin('[name].packed.css'),
-    ],
-    watchOptions: {
-      aggregateTimeout: 256,
-      poll: 512,
-    }
-  });
-};
+      watchOptions: {
+        aggregateTimeout: 256,
+        poll: 512,
+      }
+    });
+  };
+}());
 
 /**
  * This closure encapsulates all of the app specific
@@ -185,7 +221,15 @@ const createDevInterface = (function () {
   }
 }());
 
-const createServer = function () {};
+const { micro, send, sendError, createError } = require('micro');
+
+const createServer = (function () {
+  const { micro, send, sendError, createError } = require('micro');
+
+  return function () {
+
+  };
+}());
 
 /**
  * Parse whichever arguments was passed in via the command line,
