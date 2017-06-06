@@ -36,7 +36,7 @@ const createCompiler = (function () {
       entry: '../src/index.js',
       output: {
         filename: '[name].packed.js',
-        path: path.join(__dirname),
+        path: path.join(__dirname, 'dist'),
         publicPath: ('/assets/'),
       },
       module: {
@@ -138,8 +138,11 @@ const createDevInterface = (function () {
 
     win.webContents.openDevTools({ mode: 'detach' });
 
-    /** win.loadURL(); // load the document here */
-    /** figure out how to connect the processes console outputs */
+    /**
+     * Load the url and figure out how to connect the
+     * the console outputs.
+     */
+    // win.loadURL();
 
     win.on('close', function () {
       win === null;
@@ -194,8 +197,71 @@ const createDevInterface = (function () {
 
 // TODO: This is where I'm at...
 const createServer = (function () {
+  /**
+   * A functional version of `setHeader`.
+   *
+   * @param {Object}
+   * @param {String}
+   * @param {String}
+   * @returns {Void}
+   * @private
+   */
+  const setHeader = function (res, name, value) {
+    return res.setHeader(name, value);
+  }
+
+  /**
+   * A functional version of `setHeader`.
+   *
+   * @param {Object}
+   * @param {Object}
+   * @returns {Void}
+   * @private
+   */
+  const setHeaders = function (res, headers) {
+    Object.keys(headers).forEach(function (key) {
+      setHeader(res, key, headers[key]);
+    });
+  };
+
+  /**
+   * A functional version of `getHeader`.
+   *
+   * @param {Object}
+   * @param {Strinf}
+   * @returns {Void}
+   * @private
+   */
+  const getHeader = function (res, name) {
+    return res.getHeader(name);
+  };
+
+  /**
+   * Returns the micro server... we'd need to call listen
+   * on that too.
+   *
+   * @returns {Object}
+   * @private
+   */
   return function () {
-    // Serve the files as required.
+    micro(async function () {
+      try {
+        // Allow only get requests.
+
+        // Set access control headers.
+
+        // Serve JS, CSS and HTML5 with a content type (read from file).
+
+        // Serve every other type of file as an octet stream.
+      } catch {
+        /**
+         * Switch on error code and serve error markup as required.
+         * This would be using some of the same functionality as
+         * the live reload functionality that's build into the
+         * live reloading application.
+         */
+      }
+    });
   };
 }());
 
