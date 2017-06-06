@@ -1,75 +1,23 @@
 /** @jsx adapter.createNode */
 
-// const fs = require('fs');
-// const path = require('path');
+const path = require('path');
 
-const createServer = require('./create_server');
-const createCompiler = require('./create_compiler');
+const fs = require('fs-extra');
+const { app, BrowserWindow } = require('electron');
+const { micro, send, sendError, createError } = require('micro');
 
 const { parse, adapter, stringify, sequence } = require('@raywhite/pico-dom');
 
-const { app, BrowserWindow } = require('electron')
-
-/**
- * Create the JSONLD metadata for the page.
- *
- * @param {Object}
- * @returns {String}
- * @private
- */
-const createJSONLD = function (props) {
-  return JSON.stringify(Object.assign({
-    '@context': {
-      schema: 'schema":"http://schema.org/',
-    }
-  }, prop));
-};
-
 const createDocument = (function () {
+  /**
+   * Parse the contents of the index file as a document.
+   *
+   * @param {Stirng}
+   * @returns {String}
+   * @private
+   */
   return sequence(stringify, parse.bind(null, true), stringify);
 }());
-
-/**
- * Creates markup for the index page, this can
- * be used either during live service, or for
- * for a production build.
- */
-const createMarkup = function () {
-
-};
-
-createErrorMarkup = function (str = '') {
-  return (
-    <fragment>
-      <title>nanoapp-b: error</title>
-      <favicon />
-      <style>
-        {`
-          html, body {
-            margin: 0em,
-            padding: 0em,
-            font-family: 'courier',
-          }
-
-          pre {
-
-          }
-
-          pre code {
-
-          }
-        `}
-      </style>
-      <pre>
-        <code>
-
-          {'Whoops... you done goofed!\n\n'}
-          {str}
-        </code>
-      </pre>
-    </fragment>
-  );
-}
 
 const createCompiler = (function () {
   const webpack = require('webpack');
@@ -145,7 +93,8 @@ const createCompiler = (function () {
           },
           {
             /**
-             * Font are pulled out of the source and moved.
+             * Font are pulled out of the source and moved into the
+             * appropriate distribution directory.
              */
             test: /\.(eot|svg|ttf|woff|woff2)$/,
             loader: 'file-loader?name=public/fonts/[name].[ext]'
@@ -165,7 +114,8 @@ const createCompiler = (function () {
 
 /**
  * This closure encapsulates all of the app specific
- * code related to the dev interface.
+ * code related to the electron based devlopement
+ * interface.
  */
 const createDevInterface = (function () {
   let win = null;
@@ -182,9 +132,6 @@ const createDevInterface = (function () {
     return `data:text/html;base64,${new Buffer(markup).toString('base64')}`;
   };
 
-  const createErrorDocumentDataURI = sequence(createErrorPageMarkup, createDocument, createDocumentDataURI);
-  const createIndexDocumentDataURI = sequence(createIndexPageMarkup, createDocument, createDocumentDataURI);
-
   const createRenderer = function () {
     // TODO: Add more electron options here.
     win = new BrowserWindow({ width: 1024, height: 768 });
@@ -200,11 +147,35 @@ const createDevInterface = (function () {
   };
 
   return function (/** the compiler instance */) {
-    // Watch using the compiler, on error display an error page.
-    // compiler.watch(function (err, stats) {
-    //   // if err... win.loadURL(createErrorDataURI(err))
-    //   // report the error to the console.
-    // });
+    compiler.watch(function (err, stats) {
+      /**
+       * Error handling is roughly done as per the notes on how the JS
+       * API error handling section of the webpack docs dictates - see;
+       * `https://webpack.js.org/api/node/#error-handling`.
+       */
+      if (err) {
+        /**
+         * TODO: Log and error to the console.
+         * TODO: Render an error page, containing details where present.
+         */
+      }
+
+      const i = stats.toJSON();
+
+      if (stats.hasErrors()) {
+        /**
+         * TODO: Log and error to the console.
+         * TODO: Render an error page, containing `i.errors`
+         */
+      }
+
+      if (stats.hasWarnings()) {
+        /**
+         * TODO: Display the warnings in the browser console.
+         * TODO: Render the warnings to the console.
+         */
+      }
+    });
 
     // Create the window instance.
     app.on('ready', createRenderer);
@@ -214,7 +185,7 @@ const createDevInterface = (function () {
       if (win === null) createRenderer();
     });
 
-    // Only quit on window close if we not on macOS.
+    // Only quit when the window closes if we're on macOS.
     app.on('window-all-closed', function () {
       if (process.platform !== 'darwin') app.quit();
     });
@@ -270,7 +241,7 @@ const createServer = (function () {
      * watch files and recompile, reload the window on change
      * or display an error as needed.
      */
-    'serve:interface': function () {
+    '--serve:interface': function () {
       sequence(createCompiler, createDevInterface)();
     },
   };
