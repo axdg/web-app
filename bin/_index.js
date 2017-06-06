@@ -26,6 +26,37 @@ const createDocument = (function () {
   return sequence(stringify, parse.bind(null, true), stringify);
 }());
 
+const [progress, panic] = (function () {
+  const chalk = require('chalk');
+
+  /**
+   * Log to stdout or stderr using the provided colorization.
+   *
+   * @param {String}
+   * @param {String}
+   * @param {Boolean}
+   * @returns {Void}
+   * @private
+   */
+  const _progress = function (message, color = 'cyan', error = false) {
+    const fn = chalk[color];
+    return error ? console.error(fn(message)) : console.log(fn(message));
+  };
+
+  /**
+   * A wrapper utility to stderr with red colorization.
+   *
+   * @param {String}
+   * @returns {Void}
+   * @private
+   */
+  const _panic = function (message) {
+    return _progress(message, 'red', true);
+  };
+
+  return [_progress, _panic];
+}());
+
 const createCompiler = (function () {
   const webpack = require('webpack');
   const ExtractTextPlugin = require("extract-text-webpack-plugin");

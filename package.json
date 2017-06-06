@@ -4,16 +4,16 @@
   "description": "a simple boilerplate for a static-ish web app",
   "main": "./bind/index",
   "bin": {
-    "nanoapp-b": "./bin/index"
+    "web-app": "./bin/index"
   },
   "scripts": {
     "lint": "eslint src test bin bin/index",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test:renderer": "echo \"Error: no test specified\" && exit 1",
-    "build": "node ./bin/index build",
-    "build:prod": "node ./bin/index build:prod",
-    "serve": "node ./bin/index serve",
-    "serve:interface": "electron ./bin/index serve:interface"
+    "test": "echo \"Really need to write some tests...\" && exit 1",
+    "test:renderer": "echo \"Really need to write some tests...\" && exit 1",
+    "build": "node ./bin/index --build",
+    "build:prod": "node ./bin/index --build:prod",
+    "serve": "node ./bin/index --serve",
+    "serve:interface": "electron ./bin/index --serve:interface"
   },
   "author": "axdg <axdg@dfant.asia>",
   "license": "MIT",
