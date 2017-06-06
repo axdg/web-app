@@ -1,7 +1,7 @@
 {
   "name": "web-app",
   "version": "0.0.1",
-  "description": "a simple boilerplate for a web app",
+  "description": "a simple boilerplate for a static-ish web app",
   "main": "./bind/index",
   "bin": {
     "nanoapp-b": "./bin/index"

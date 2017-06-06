@@ -192,13 +192,10 @@ const createDevInterface = (function () {
   }
 }());
 
-const { micro, send, sendError, createError } = require('micro');
-
+// TODO: This is where I'm at...
 const createServer = (function () {
-  const { micro, send, sendError, createError } = require('micro');
-
   return function () {
-
+    // Serve the files as required.
   };
 }());
 
@@ -251,5 +248,7 @@ const createServer = (function () {
 
   if (argv.length || Object.keys(fns).indexOf(arg) === -1) {} // Throw
 
-  return fns[arg]();
-}(process.argv)/** () */); // Uncomment IIFE when complete.
+  // TODO: Log a sensible error where the command isn't recognised.
+  const command = fns[argv];
+  return command ? command() ? null;
+}(process.argv));
