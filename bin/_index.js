@@ -1,11 +1,18 @@
 /** @jsx adapter.createNode */
 
+/**
+ * Node core modules.
+ */
 const path = require('path');
 
-const fs = require('fs-extra');
+/**
+ * Electron modules.
+ */
 const { app, BrowserWindow } = require('electron');
-const { micro, send, sendError, createError } = require('micro');
 
+
+const { readFile, writeFile, exists } = require('fs-extra');
+const { micro, send, sendError, createError } = require('micro');
 const { parse, adapter, stringify, sequence } = require('@raywhite/pico-dom');
 
 const createDocument = (function () {
@@ -149,7 +156,7 @@ const createDevInterface = (function () {
     });
   };
 
-  return function (/** the compiler instance */) {
+  return function (compiler) {
     compiler.watch(function (err, stats) {
       /**
        * Error handling is roughly done as per the notes on how the JS
