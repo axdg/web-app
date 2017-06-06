@@ -10,4 +10,6 @@
 
 **WIP**
 
+## License
 
+&bull; **MIT** &copy; axdg, 2017 &bull;
