@@ -1,8 +1,8 @@
-const fs = require('fs');
 const path = require('path');
 const { parse } = require('url');
 
 const { micro, send, sendError, createError } = require('micro');
+const { exists, readFile, writeFile } = require('fs-extra');
 
 /**
  * A functional version of `setHeader`.
@@ -43,42 +43,7 @@ const getHeader = function (res, name) {
   return res.getHeader(name);
 };
 
-/**
- * A promisified wrapper around `fs.stat`.
- *
- * @param {String}
- * @returns {Promise}
- * @private
- */
-const stat = function (file) {
-  return new Promise(function (resolve, reject) {
-    fs.stat(file, function (err, stats) {
-      if (err) return reject(err);
-      resolve(stats);
-    });
-  });
-};
-
-/**
- * A promisified wrapper around `fs.readFile`.
- *
- * @param {String}
- * @param {String}
- * @returns {Promise}
- * @private
- */
-const readFile = function (file, encoding) {
-  return new Promise(function (resolve, reject) {
-    fs.readFile(file, encoding = null, function (err, data) {
-      if (err) return reject(err);
-      resolve(data);
-    });
-  });
-};
-
-const createListener = function (dirname) {
-
-};
+const createListener = function (dirname) {};
 
 const listener = async function (req, res) {
   const { method, url } = req;
