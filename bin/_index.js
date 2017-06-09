@@ -4,28 +4,27 @@
  * Node core modules.
  */
 const path = require('path');
+const url = require('url');
 
 /**
  * Electron modules.
  */
 const { app, BrowserWindow } = require('electron');
 
-
-const { readFile, writeFile, exists } = require('fs-extra');
+/**
+ * All other imported modules.
+ */
+const { readFile, writeFile, exists, copy } = require('fs-extra');
 const { micro, send, sendError, createError } = require('micro');
-const { parse, adapter, stringify, sequence } = require('@raywhite/pico-dom');
+const { parse, adapter, map, stringify, sequence } = require('@raywhite/pico-dom');
+const renderer = new require('markdown-it')({ html: true });
 
-const createDocument = (function () {
-  /**
-   * Parse the contents of the index file as a document.
-   *
-   * @param {Stirng}
-   * @returns {String}
-   * @private
-   */
-  return sequence(stringify, parse.bind(null, true), stringify);
-}());
+/**
+ * Metadata can be iimported directly from `package.json`.
+ */
+const { name, description, author, license } = require('../package.json');
 
+// The reporters for stdin and stdout.
 const [progress, panic] = (function () {
   const chalk = require('chalk');
 
@@ -40,7 +39,8 @@ const [progress, panic] = (function () {
    */
   const _progress = function (message, color = 'cyan', error = false) {
     const fn = chalk[color];
-    return error ? console.error(fn(message)) : console.log(fn(message));
+    const m = `${name}: ${message}`
+    return error ? console.error(fn(m)) : console.log(fn(m));
   };
 
   /**
@@ -57,6 +57,97 @@ const [progress, panic] = (function () {
   return [_progress, _panic];
 }());
 
+const createDocument = (function () {
+  const fn = function (node) {
+    // Add a some spacing after the initial comment.
+    if (adapter.isCommentNode(node) && adapter.getCommentNodeContent(node).indexOf(author) !== 1) {
+      return [node, adapter.createTextNode('\n\n')];
+    }
+
+    // Remove empty text nodes (minify).
+    if (adapter.isTextNode(node) && !adapter.getTextNodeContent(node).trim()) {
+      return null;
+    }
+
+    return node;
+  };
+
+  /**
+   * Parse the contents of the index file as a document.
+   *
+   * @param {Stirng}
+   * @returns {String}
+   * @private
+   */
+  const create = sequence(stringify, parse.bind(null, true), map.bind(null, fn), stringify);
+
+  /**
+   * The JSON-LD metadata to embed into the page.
+   *
+   * TODO: Add image metadata.
+   * Object.assign(schema, { thumbnailUrl: image, image })
+   */
+  const schema = JSON.stringify({
+      '@context': 'http://schema.org',
+      '@type': 'WebPage',
+      name,
+      description,
+      author,
+      license,
+  });
+
+  /**
+   * Slice the comment lines to a total length of 64 chars.
+   *
+   * @param {String}
+   * @returns {String}
+   * @private
+   */
+  const slice = str => str.slice(0, 64);
+
+  /**
+   * Build the markup for the index / 404 file.
+   *
+   * @param {String}
+   * @param {String}
+   * @param {String}
+   * @returns {String}
+   */
+  return function (content, href, src) {
+    const _name = slice(`*** ${name} ************************************************************`);
+    const _author = slice(`*** ${author} ************************************************************`);
+
+    return create(`
+<!-- ***********************************************************
+****************************************************************
+${_name}
+****************************************************************
+${_author}
+****************************************************************
+************************************************************ -->
+
+<meta property="og:title" content="${name}"/>
+<meta property="og:site_name" content="${name}"/>
+<meta property="og:description" content="${description}"/>
+
+<script type="application/ld+json">${JSON.stringify(schema)}</script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>${name}</title>
+
+<link rel="icon" href="/minimal/public/favicon.png" type="image/png">
+
+<link rel="stylesheet" href="${href}">
+
+<!-- NOTE: It's possible that loading of this should be deferred. -->
+<script src="${src}"></script>
+
+${renderer.render(content)}
+    `);
+  };
+}());
+
 const createCompiler = (function () {
   const webpack = require('webpack');
   const ExtractTextPlugin = require("extract-text-webpack-plugin");
@@ -70,12 +161,12 @@ const createCompiler = (function () {
    * @returns {Object}
    */
   return function (production = false) {
-    return wepback({
-      entry: '../src/index.js',
+    return webpack({
+      entry: './src/index.js',
       output: {
         filename: '[name].packed.js',
-        path: path.join(__dirname, 'dist'),
-        publicPath: ('/assets/'),
+        path: path.join(__dirname, '../', 'dist'),
+        publicPath: ('/public/'),
       },
       module: {
         rules: [
@@ -100,14 +191,6 @@ const createCompiler = (function () {
           },
           {
             /**
-             * Automatic inlining of markdown files when they
-             * are required.
-             */
-            test: /.md$/,
-            loader: 'raw-loader',
-          },
-          {
-            /**
              * CSS setup is simple, it just inlines imports
              * and applies transformation of future syntax.
              */
@@ -121,7 +204,7 @@ const createCompiler = (function () {
                   options: {
                     // TODO: Add minification to CSS assets (in prod).
                     plugins: () => [
-                      require('postcss-import')({})),
+                      require('postcss-import')({}),
                       require('postcss-cssnext')({}),
                     ],
                   }
@@ -131,10 +214,13 @@ const createCompiler = (function () {
           },
           {
             /**
-             * Font are pulled out of the source and moved into the
+             * Fonts are pulled out of the source and moved into the
              * appropriate distribution directory.
+             *
+             * TODO: This needs to be made to work with other static
+             * content as well - currently being done via a clone.
              */
-            test: /\.(eot|svg|ttf|woff|woff2)$/,
+            test: /\.(eot|svg|ttf|woff|woff2|png|ico)$/,
             loader: 'file-loader?name=public/fonts/[name].[ext]'
           }
         ],
@@ -216,6 +302,12 @@ const createDevInterface = (function () {
          * TODO: Render the warnings to the console.
          */
       }
+
+      /**
+       * No errors to report... so we can reload the window,
+       * but only if it actually exists.
+       */
+      if (win !== null) {/** Reload the document */}
     });
 
     // Create the window instance.
@@ -282,52 +374,154 @@ const createServer = (function () {
    * @private
    */
   return function () {
-    micro(async function () {
+    micro(async function (req, res) {
       try {
         // Allow only get requests.
+        if (req.method !== 'GET') throw createError(405, 'Method Not Allowed');
 
-        // Set access control headers.
+        const { pathname } = url.parse(req.url);
+
+        setHeaders(res, {
+          'Access-Control-Allow-Headers': '*',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        });
+
+        if (pathname === '/') {
+          const [cascade, script] = await Promise.all([
+            readFile(/** Path to the bundled css. */),
+            readFile(/** Path to the bundled script. */)
+          ]);
+
+          /**
+           * TODO: This function needs to take both that cascade and the
+           * script and generate an index markup file... the script can
+           * be base64 encoded and dumped into the file.
+           */
+          createDocument(content, href, src);
+        }
 
         // Serve JS, CSS and HTML5 with a content type (read from file).
 
         // Serve every other type of file as an octet stream.
-      } catch {
+      } catch (err) {
         /**
          * Switch on error code and serve error markup as required.
          * This would be using some of the same functionality as
          * the live reload functionality that's build into the
          * live reloading application.
          */
+        panic(err.stack);
       }
     });
   };
 }());
 
 /**
+ * The handler for a static webpack compilation -
+ * we either need to report success or errors, otherwise
+ * the `watch` handler above will suffice.
+ *
+ * @param {Object}
+ * @param {Object}
+ * @returns {Void}
+ */
+function handler(err, stats) {
+  if (err) {
+    panic(err.stack || err);
+
+    if (err.details) panic(err.details);
+    return;
+  }
+
+  const info = stats.toJson();
+  if (stats.hasErrors()) panic(info.errors);
+  if (stats.hasWarnings()) panic(info.warnings);
+
+  progress('bundling completed successfully', 'green');
+  progress('transferring file dependancies');
+
+  copy('./src/public', './dist/public', function (err) {
+    if (err) return panic(err);
+    writeFile('./dist/public', createDocument(readFil))
+    progress('transfer complete');
+  });
+}
+
+async function build () {
+  progress('starting webpack build');
+
+  try {
+    await Promise.all([
+      // Compile the JS using webpack.
+      new Promise(function (resolve, reject) {
+        createCompiler().run(function (err, stats) {
+          if (err) return reject(err);
+
+          const info = stats.toJson();
+
+          if (stats.hasErrors()) panic(info.errors);
+          if (stats.hasWarnings()) panic(info.warnings);
+
+          // Report success.
+          progress('weback build success', 'blue');
+
+          // Grab the build stats.
+          const str = stats.toString({ color: false, chunks: false })
+            .replace(/^Hash\: /, '')
+            .split('\n')
+            .map(l => `   ${l}`)
+            .join('\n');
+
+          progress(str, 'yellow');
+          resolve();
+        })
+      }),
+
+      // Copy the src files that are needed in dist.
+      copy('./src/public', './dist/public'),
+
+      // Create the index document.
+      readFile('./src/index.md', 'utf-8').then(function (content) {
+        return createDocument(content, '/index.packed.css', 'index.pack.js');
+
+      // TODO: Report progress on writing this file.
+      }).then(str => writeFile('./dist/index.html')),
+    ]);
+
+  } catch (err) {
+    panic(err.stack || err);
+    if (err.details) panic(err.details);
+  }
+
+  progress('building all assets complete');
+}
+
+/**
  * Parse whichever arguments was passed in via the command line,
  * and figure out the appropriate logic to run.
  */
-(function (argv) {
-  console.log('up and running');
-
+(async function (argv) {
+  progress('init', 'yellow');
   const fns = {
     /**
      * Make a static build of the application, this
      * should just be used for inspecting everything
      * in the repo, with minification etc.
      */
-    '--build': function () {
-      console.log('apologies... not implemented');
-    },
+    '--build': build.bind(null),
 
     /**
      * Make a production build of the application,
      * this is intended to be called by a deploy script but
      * can also be used to inspect the bundles etc.
+     *
+     * TODO: Need to pass an some variable in order to bundle with
+     * minimization.
      */
-    '--build:prod': function () {
-      console.log('apologies... not implemented');
-    },
+    '--build:prod': build.bind(null),
 
     /**
      * Watch the app and build on change, for testing
@@ -343,16 +537,18 @@ const createServer = (function () {
      * or display an error as needed.
      */
     '--serve:interface': function () {
-      sequence(createCompiler, createDevInterface)();
+      // sequence(createCompiler, createDevInterface)();
     },
   };
 
-  const _argv = argv.splice(2);
-  const arg = _argv.pop();
-
-  if (argv.length || Object.keys(fns).indexOf(arg) === -1) {} // Throw
+  const arg = argv.pop();
 
   // TODO: Log a sensible error where the command isn't recognised.
-  const command = fns[argv];
-  return command ? command() ? null;
+  const command = fns[arg];
+  if (command) {
+    await command();
+    return;
+  }
+
+  // TODO: Fell, through... command not found.
 }(process.argv));

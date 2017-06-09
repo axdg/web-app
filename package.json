@@ -57,5 +57,7 @@
     "style-loader": "^0.16.1",
     "webpack": "^2.5.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "normalize.css": "^7.0.0"
+  }
 }
