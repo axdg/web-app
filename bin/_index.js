@@ -96,21 +96,6 @@ const createDocument = (function () {
   const create = sequence(parse.bind(null, true), map.bind(null, fn), stringify);
 
   /**
-   * The JSON-LD metadata to embed into the page.
-   *
-   * TODO: Add image metadata.
-   * Object.assign(schema, { thumbnailUrl: image, image })
-   */
-  const schema = JSON.stringify({
-    '@context': 'http://schema.org',
-    '@type': 'WebPage',
-    name,
-    description,
-    author,
-    license,
-  });
-
-  /**
    * Pad a string a string for injection into a comment.
    *
    * @param {String}
@@ -133,7 +118,31 @@ const createDocument = (function () {
    * @param {String}
    * @returns {String}
    */
+
+  // TODO: Functional version... will break tests, replace return value.
+  function (props/**, options */) {
+    const { content, href, src, name, description, author, license } = props;
+    [content, href, src, name, description, author, license].forEach(function (p) {
+      if (item === undefined) throw new Error(`required property ${p} was undefined`);
+    });
+  }
+
   return function (content, href, src) {
+     /**
+     * The JSON-LD metadata to embed into the page.
+     *
+     * TODO: Potentially add image metadata;
+     * Object.assign(schema, { thumbnailUrl: image, image })
+     */
+    const JSONLD_SCHEMA = JSON.stringify({
+      '@context': 'http://schema.org',
+      '@type': 'WebPage',
+      name,
+      description,
+      author,
+      license,
+    });
+
     return create(`
 <!-- ***********************************************************
 ****************************************************************
@@ -147,17 +156,17 @@ ${pad(author)}
 <meta property="og:site_name" content="${name}"/>
 <meta property="og:description" content="${description}"/>
 
-<script type="application/ld+json">${JSON.stringify(schema)}</script>
+<script type="application/ld+json">${JSONLD_SCHEMA}</script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>${name}</title>
 
-<link rel="icon" href="/minimal/public/favicon.png" type="image/png">
+<link rel="icon" href="/${name}/public/favicon.png" type="image/png">
 
 <link rel="stylesheet" href="${href}">
 
-<!-- NOTE: It's possible that loading of this should be deferred. -->
+<!-- TODO: Should the loading of this script be deferred? -->
 <script src="${src}"></script>
 
 ${renderer.render(content)}
