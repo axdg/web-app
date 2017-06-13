@@ -60,7 +60,7 @@ const [progress, panic] = (function () {
 const createDocument = (function () {
   const fn = function (node) {
     // Add a some spacing after the initial comment.
-    if (adapter.isCommentNode(node) && adapter.getCommentNodeContent(node).indexOf(author) !== 1) {
+    if (adapter.isCommentNode(node) && adapter.getCommentNodeContent(node).indexOf(author) !== -1) {
       return [node, adapter.createTextNode('\n\n')];
     }
 
@@ -79,7 +79,7 @@ const createDocument = (function () {
    * @returns {String}
    * @private
    */
-  const create = sequence(stringify, parse.bind(null, true), map.bind(null, fn), stringify);
+  const create = sequence(parse.bind(null, true), map.bind(null, fn), stringify);
 
   /**
    * The JSON-LD metadata to embed into the page.
@@ -107,6 +107,8 @@ const createDocument = (function () {
 
   /**
    * Build the markup for the index / 404 file.
+   *
+   * TODO: Add permalink for gh-pages 404.
    *
    * @param {String}
    * @param {String}
@@ -164,7 +166,7 @@ const createCompiler = (function () {
     return webpack({
       entry: './src/index.js',
       output: {
-        filename: '[name].packed.js',
+        filename: 'index.packed.js',
         path: path.join(__dirname, '../', 'dist'),
         publicPath: ('/public/'),
       },
@@ -192,7 +194,7 @@ const createCompiler = (function () {
           {
             /**
              * CSS setup is simple, it just inlines imports
-             * and applies transformation of future syntax.
+             * and applies transformation of future syxntax.
              */
             test: /\.css$/,
             use: ExtractTextPlugin.extract({
@@ -212,21 +214,10 @@ const createCompiler = (function () {
               ],
             })
           },
-          {
-            /**
-             * Fonts are pulled out of the source and moved into the
-             * appropriate distribution directory.
-             *
-             * TODO: This needs to be made to work with other static
-             * content as well - currently being done via a clone.
-             */
-            test: /\.(eot|svg|ttf|woff|woff2|png|ico)$/,
-            loader: 'file-loader?name=public/fonts/[name].[ext]'
-          }
         ],
       },
       plugins: [
-        new ExtractTextPlugin('[name].packed.css'),
+        new ExtractTextPlugin('index.packed.css'),
       ],
       watchOptions: {
         aggregateTimeout: 256,
@@ -420,36 +411,8 @@ const createServer = (function () {
 }());
 
 /**
- * The handler for a static webpack compilation -
- * we either need to report success or errors, otherwise
- * the `watch` handler above will suffice.
- *
- * @param {Object}
- * @param {Object}
- * @returns {Void}
+ * Build the contents
  */
-function handler(err, stats) {
-  if (err) {
-    panic(err.stack || err);
-
-    if (err.details) panic(err.details);
-    return;
-  }
-
-  const info = stats.toJson();
-  if (stats.hasErrors()) panic(info.errors);
-  if (stats.hasWarnings()) panic(info.warnings);
-
-  progress('bundling completed successfully', 'green');
-  progress('transferring file dependancies');
-
-  copy('./src/public', './dist/public', function (err) {
-    if (err) return panic(err);
-    writeFile('./dist/public', createDocument(readFil))
-    progress('transfer complete');
-  });
-}
-
 async function build () {
   progress('starting webpack build');
 
@@ -468,12 +431,13 @@ async function build () {
           // Report success.
           progress('weback build success', 'blue');
 
-          // Grab the build stats.
+          // Grab the build stats... format and log.c
           const str = stats.toString({ color: false, chunks: false })
             .replace(/^Hash\: /, '')
             .split('\n')
             .map(l => `   ${l}`)
-            .join('\n');
+            .join('\n')
+            .trim();
 
           progress(str, 'yellow');
           resolve();
@@ -481,22 +445,38 @@ async function build () {
       }),
 
       // Copy the src files that are needed in dist.
-      copy('./src/public', './dist/public'),
+      (async function () {
+        progress('transferring static public contents');
+
+        try {
+          await copy('./src/public', './dist/public');
+        } catch (err) { throw err; }
+
+        progress('transfer of static contents complete');
+      }()),
 
       // Create the index document.
-      readFile('./src/index.md', 'utf-8').then(function (content) {
-        return createDocument(content, '/index.packed.css', 'index.pack.js');
+      (async function () {
+        progress('generating index document');
 
-      // TODO: Report progress on writing this file.
-      }).then(str => writeFile('./dist/index.html')),
+        try {
+          const content = await readFile('./src/index.md', 'utf-8');
+          const markup = createDocument(content, '/index.packed.css', 'index.pack.js');
+          await writeFile('./dist/index.html', markup);
+        } catch (err) { throw err; }
+
+        progress('index document generated');
+      }()),
     ]);
 
   } catch (err) {
+    panic('whoops... something went wrong');
     panic(err.stack || err);
     if (err.details) panic(err.details);
   }
 
-  progress('building all assets complete');
+  // Report completion.
+  progress('done... building of all assets complete', 'blue');
 }
 
 /**

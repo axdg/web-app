@@ -1,1 +1,3 @@
-index.md
+# web-app
+
+> A minimal web-app boilerplate.
