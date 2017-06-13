@@ -32,6 +32,27 @@ const { createError } = micro;
 const { name, description, author, license } = require('../package.json');
 
 /**
+ * The default props for document generation are
+ * derived from `package.json`.
+ */
+const DOCUMENT_PROPERTIES = {
+  name,
+  description,
+  author,
+  license,
+  href: 'index.packed.css',
+  src: 'index.packed.js',
+};
+
+/**
+ * Constants for the different directories used
+ * in the build process.
+ */
+const BASE_DIR = path.join(__dirname, '../');
+const SRC_DIR = path.join(BASE_DIR, 'src');
+const DIST_DIR = path.join(BASE_DIR, 'dist');
+
+/**
  * The reporters for stderr and stdout.
  *
  * TODO: Replace with something like `ora` - `https://github.com/sindresorhus/ora`
@@ -120,7 +141,7 @@ const createDocument = (function () {
    */
 
   // TODO: Functional version... will break tests, replace return value.
-  function (props/**, options */) {
+  function render(props/**, options */) {
     const { content, href, src, name, description, author, license } = props;
     [content, href, src, name, description, author, license].forEach(function (p) {
       if (item === undefined) throw new Error(`required property ${p} was undefined`);
@@ -162,7 +183,7 @@ ${pad(author)}
 
 <title>${name}</title>
 
-<link rel="icon" href="/${name}/public/favicon.png" type="image/png">
+<link rel="icon" href="/public/favicon.png" type="image/png">
 
 <link rel="stylesheet" href="${href}">
 
@@ -179,16 +200,18 @@ const createCompiler = (function () {
    * Creates a webpack compiler instance with
    * the specified config.
    *
+   * TODO: Add compilation options.
+   *
    * @param {Boolean}
     *
    * @returns {Object}
    */
   return function (/** production = false */) {
     return webpack({
-      entry: './src/index.js',
+      entry: path.join(SRC_DIR, 'index.js'),
       output: {
         filename: 'index.packed.js',
-        path: path.join(__dirname, '../', 'dist'),
+        path: DIST_DIR,
         publicPath: ('/public/'),
       },
       module: {
@@ -314,21 +337,27 @@ const createServer = (function () {
           'Cache-Control': 'no-cache',
         });
 
-        // TODO: Use a switch statement instead.
         let data;
-        if (pathname === '/') {
-          data = await readFile('./dist/index.html', 'utf-8');
-          setHeader(res, 'Content-Type', 'text/html; charset=utf-8');
-        } else if (pathname === '/index.packed.css') {
-          data = await readFile('./dist/index.packed.css', 'utf-8');
-          setHeader(res, 'Content-Type', 'text/css; charset=utf-8');
-        } else if (pathname === '/index.packed.js') {
-          data = await readFile('./dist/index.packed.js', 'utf-8');
-          setHeader(res, 'Content-Type', 'application/javascript; charset=utf-8');
-        } else if (path.extname(pathname)) {
-          const _pathname = path.join(__dirname, '../dist', path.normalize(pathname));
-          data = await readFile(_pathname);
-        } else { throw new Error(); }
+        switch (pathname) {
+          case '/':
+            data = await readFile(path.join(DIST_DIR, 'index.html'), 'utf-8');
+            setHeader(res, 'Content-Type', 'text/html; charset=utf-8');
+            break;
+
+          case '/index.packed.css':
+            data = await readFile(path.join(DIST_DIR, 'index.packed.css'), 'utf-8');
+            setHeader(res, 'Content-Type', 'text/css; charset=utf-8');
+            break;
+
+          case '/index.packed.js':
+            data = await readFile(path.join(DIST_DIR, 'index.packed.js'), 'utf-8');
+            setHeader(res, 'Content-Type', 'application/javascript; charset=utf-8');
+            break;
+
+          default:
+            const _pathname = path.join(DIST_DIR, path.normalize(pathname));
+            data = await readFile(_pathname);
+        }
 
         progress(`serving ${pathname}`, 'white');
         return data;
