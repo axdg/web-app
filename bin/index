@@ -2,12 +2,9 @@
 
 /**
  * NOTE: The version of V8 that ships with electron (presently)
- * doesn't support async functions, which we want to use...
- * so we just wrap the actual script in an async transpiling
- * require call, further, we use babel to transform JSX.
- *
- * TODO: There's probably no need to use both babel and async-to-gen,
- * consider getting rid of one.
+ * doesn't support async functions so we just wrap the actual
+ * script in an async transpiling require call... babel is also
+ * used to transpile JSX.
  */
 require('babel-register')({
   plugins: ['transform-react-jsx', 'transform-async-functions'],
@@ -16,6 +13,6 @@ require('babel-register')({
 });
 
 /**
- * Execute.
+ * Execute the actual script.
  */
 require('./_index.js');

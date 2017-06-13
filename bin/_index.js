@@ -5,20 +5,26 @@ const path = require('path');
 const url = require('url');
 
 /**
- * Electron modules.
+ * Webpack.
  */
-const { app, BrowserWindow } = require('electron');
+const webpack = require('webpack');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 /**
  * All other imported modules.
  */
+const chalk = require('chalk'); // eslint-disable-line global-require
 const micro = require('micro');
 const port = require('get-port');
-const { readFile, writeFile, exists, copy } = require('fs-extra');
+const { readFile, writeFile, copy } = require('fs-extra');
 const { parse, adapter, map, stringify, sequence } = require('@raywhite/pico-dom');
-const renderer = new require('markdown-it')({ html: true });
 
-const { send, sendError, createError } = micro;
+const renderer = new require('markdown-it')({ html: true }); // eslint-disable-line new-cap
+
+/**
+ * Server methods.
+ */
+const { createError } = micro;
 
 /**
  * Metadata can be iimported directly from `package.json`.
@@ -31,8 +37,6 @@ const { name, description, author, license } = require('../package.json');
  * TODO: Replace with something like `ora` - `https://github.com/sindresorhus/ora`
  */
 const [progress, panic] = (function () {
-  const chalk = require('chalk');
-
   /**
    * Log to stdout or stderr using the provided colorization.
    *
@@ -44,8 +48,8 @@ const [progress, panic] = (function () {
    */
   const _progress = function (message, color = 'cyan', error = false) {
     const fn = chalk[color];
-    const m = `${name}: ${message}`
-    return error ? console.error(fn(m)) : console.log(fn(m));
+    const m = `${name}: ${message}`;
+    return error ? console.error(fn(m)) : console.log(fn(m)); // eslint-disable-line no-console
   };
 
   /**
@@ -93,12 +97,12 @@ const createDocument = (function () {
    * Object.assign(schema, { thumbnailUrl: image, image })
    */
   const schema = JSON.stringify({
-      '@context': 'http://schema.org',
-      '@type': 'WebPage',
-      name,
-      description,
-      author,
-      license,
+    '@context': 'http://schema.org',
+    '@type': 'WebPage',
+    name,
+    description,
+    author,
+    license,
   });
 
   /**
@@ -156,9 +160,6 @@ ${renderer.render(content)}
 }());
 
 const createCompiler = (function () {
-  const webpack = require('webpack');
-  const ExtractTextPlugin = require("extract-text-webpack-plugin");
-
   /**
    * Creates a webpack compiler instance with
    * the specified config.
@@ -167,7 +168,7 @@ const createCompiler = (function () {
     *
    * @returns {Object}
    */
-  return function (production = false) {
+  return function (/** production = false */) {
     return webpack({
       entry: './src/index.js',
       output: {
@@ -188,13 +189,15 @@ const createCompiler = (function () {
               options: {
                 presets: ['latest', 'stage-2'],
                 plugins: [
+                  /* eslint-disable global-require */
                   require('babel-plugin-transform-class-properties'),
                   require('babel-plugin-transform-object-assign'),
                   require('babel-plugin-transform-es2015-block-scoping'),
                   require('babel-plugin-transform-react-jsx'),
-                ]
-              }
-            }
+                  /* eslint-enable global-require */
+                ],
+              },
+            },
           },
           {
             /**
@@ -211,13 +214,15 @@ const createCompiler = (function () {
                   options: {
                     // TODO: Add minification to CSS assets (in prod).
                     plugins: () => [
+                      /* eslint-disable global-require */
                       require('postcss-import')({}),
                       require('postcss-cssnext')({}),
+                      /* eslint-enable global-require */
                     ],
-                  }
-                }
+                  },
+                },
               ],
-            })
+            }),
           },
         ],
       },
@@ -227,7 +232,7 @@ const createCompiler = (function () {
       watchOptions: {
         aggregateTimeout: 256,
         poll: 512,
-      }
+      },
     });
   };
 }());
@@ -242,9 +247,9 @@ const createServer = (function () {
    * @returns {Void}
    * @private
    */
-  const setHeader = function (res, name, value) {
+  const setHeader = function (res, name, value) { // eslint-disable-line no-shadow
     return res.setHeader(name, value);
-  }
+  };
 
   /**
    * A functional version of `setHeader`.
@@ -268,7 +273,7 @@ const createServer = (function () {
    * @returns {Void}
    * @private
    */
-  const getHeader = function (res, name) {
+  const getHeader = function (res, name) { // eslint-disable-line no-shadow, no-unused-vars
     return res.getHeader(name);
   };
 
@@ -306,14 +311,14 @@ const createServer = (function () {
           data = await readFile('./dist/index.packed.js', 'utf-8');
           setHeader(res, 'Content-Type', 'application/javascript; charset=utf-8');
         } else if (path.extname(pathname)) {
-          _pathname = path.join(__dirname, '../dist', path.normalize(pathname));
+          const _pathname = path.join(__dirname, '../dist', path.normalize(pathname));
           data = await readFile(_pathname);
         } else { throw new Error(); }
 
         progress(`serving ${pathname}`, 'white');
         return data;
       } catch (err) {
-        console.log(err);
+        panic(err);
         if (err.statusCode) throw err;
         throw createError(404, 'Not Found');
       }
@@ -328,7 +333,7 @@ const createServer = (function () {
  * @returns {Promise}
  * @private
  */
-async function build (/** prod */) {
+async function build(/** prod */) {
   progress('running webpack build');
 
   try {
@@ -348,15 +353,15 @@ async function build (/** prod */) {
 
           // Grab the build stats... format and log.c
           const str = stats.toString({ color: false, chunks: false })
-            .replace(/^Hash\: /, '')
+            .replace(/^Hash: /, '')
             .split('\n')
             .map(l => `   ${l}`)
             .join('\n')
             .trim();
 
           progress(str, 'yellow');
-          resolve();
-        })
+          return resolve();
+        });
       }),
 
       // Copy the src files that are needed in dist.
@@ -383,7 +388,6 @@ async function build (/** prod */) {
         progress('index document generated');
       }()),
     ]);
-
   } catch (err) {
     panic('whoops... something went wrong');
     panic(err.stack || err);
@@ -399,8 +403,9 @@ async function build (/** prod */) {
  * if an interface is passed the window developmnet
  * window will be automitically reloaded.
  */
-const createHandler = function (win = null) {
+const createHandler = function () {
   return async function (err, stats) {
+    /* eslint-disable no-shadow */
     try {
       if (err) throw err;
 
@@ -414,7 +419,7 @@ const createHandler = function (win = null) {
 
       // Grab the build stats... format and log.c
       const str = stats.toString({ color: false, chunks: false })
-        .replace(/^Hash\: /, '')
+        .replace(/^Hash: /, '')
         .split('\n')
         .map(l => `   ${l}`)
         .join('\n')
@@ -455,10 +460,8 @@ const createHandler = function (win = null) {
     } catch (err) {
       panic(err.stack || err);
       if (err.details) panic(err.details);
-
-      // Create an error page on the fly.
-      // if (win !== null) win.loadURL('../dist/index.html');
-    };
+    }
+    /* eslint-enable no-shadow */
   };
 };
 
@@ -511,10 +514,9 @@ const createHandler = function (win = null) {
 
   const arg = argv.pop();
 
-  // TODO: Log a sensible error where the command isn't recognised.
+  /**
+   * TODO: Log a sensible error when the command isn't recognised.
+   */
   const command = fns[arg];
-  if (command) {
-    await command();
-    return;
-  }
+  if (command) await command();
 }(process.argv));
