@@ -12,8 +12,7 @@
     "test:renderer": "echo \"Really need to write some tests...\" && exit 1",
     "build": "node ./bin/index --build",
     "build:prod": "node ./bin/index --build:prod",
-    "serve": "node ./bin/index --serve",
-    "serve:interface": "electron ./bin/index --serve:interface"
+    "serve": "node ./bin/index --serve"
   },
   "author": "axdg <axdg@dfant.asia>",
   "license": "MIT",
@@ -35,9 +34,6 @@
     "babel-register": "^6.24.1",
     "chalk": "^1.1.3",
     "css-loader": "^0.28.0",
-    "electron": "^1.6.6",
-    "electron-mocha": "^3.4.0",
-    "electron-prebuilt": "^1.4.13",
     "eslint": "^3.19.0",
     "eslint-config-airbnb": "^14.1.0",
     "eslint-plugin-import": "^2.2.0",
