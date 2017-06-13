@@ -264,6 +264,10 @@ const createDevInterface = (function () {
     });
   };
 
+  async function handler(err, stats) {
+
+  }
+
   return function (compiler) {
     compiler.watch(function (err, stats) {
       /**
@@ -410,11 +414,20 @@ const createServer = (function () {
   };
 }());
 
+// TODO: You are here... build the app.
+function handler(err, stats) {
+  // Handle the webpack build.
+}
+
 /**
- * Build the contents
+ * Compile the contents of the site.
+ *
+ * @param {Boolean} NOTE: Not implemented.
+ * @returns {Promise}
+ * @private
  */
-async function build () {
-  progress('starting webpack build');
+async function build (/** prod */) {
+  progress('running webpack build');
 
   try {
     await Promise.all([
@@ -517,7 +530,7 @@ async function build () {
      * or display an error as needed.
      */
     '--serve:interface': function () {
-      // sequence(createCompiler, createDevInterface)();
+      console.log('apologies... not implemented')
     },
   };
 
