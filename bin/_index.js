@@ -68,9 +68,14 @@ const [progress, panic] = (function () {
 
 const createDocument = (function () {
   const fn = function (node) {
-    // Add a some spacing after the initial comment.
-    if (adapter.isCommentNode(node) && adapter.getCommentNodeContent(node).indexOf(author) !== -1) {
-      return [node, adapter.createTextNode('\n\n')];
+    if (adapter.isCommentNode(node)) {
+      // Add some spacing after the header comment.
+      if (adapter.getCommentNodeContent(node).indexOf(author) !== -1) {
+        return [node, adapter.createTextNode('\n\n')];
+      }
+
+      // Remove all other comment nodes.
+      return null;
     }
 
     // Remove empty text nodes (minify).
@@ -106,18 +111,22 @@ const createDocument = (function () {
   });
 
   /**
-   * Slice the comment lines to a total length of 64 chars.
+   * Pad a string a string for injection into a comment.
    *
    * @param {String}
    * @returns {String}
-   * @private
    */
-  const slice = str => str.slice(0, 64);
+  const pad = str => `*** ${str} ************************************************************`.slice(0, 64);
 
   /**
    * Build the markup for the index / 404 file.
    *
-   * TODO: Add permalink for gh-pages 404.
+   * TODO: Create an option to add a permalink for
+   * gh-pages and to statically inline assets into
+   * the markup.
+   *
+   * TODO: Pass all parameters...
+   * make this functional.
    *
    * @param {String}
    * @param {String}
@@ -125,15 +134,12 @@ const createDocument = (function () {
    * @returns {String}
    */
   return function (content, href, src) {
-    const _name = slice(`*** ${name} ************************************************************`);
-    const _author = slice(`*** ${author} ************************************************************`);
-
     return create(`
 <!-- ***********************************************************
 ****************************************************************
-${_name}
+${pad(name)}
 ****************************************************************
-${_author}
+${pad(author)}
 ****************************************************************
 ************************************************************ -->
 
