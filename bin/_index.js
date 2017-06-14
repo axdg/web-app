@@ -9,6 +9,9 @@ const url = require('url');
  */
 const webpack = require('webpack');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+
+const msf = new require('memory-fs'); // eslint-disable-line new-cap
 
 /**
  * All other imported modules.
@@ -17,9 +20,8 @@ const chalk = require('chalk'); // eslint-disable-line global-require
 const micro = require('micro');
 const port = require('get-port');
 const { readFile, writeFile, copy } = require('fs-extra');
-const { parse, adapter, map, stringify, sequence } = require('@raywhite/pico-dom');
-
 const renderer = new require('markdown-it')({ html: true }); // eslint-disable-line new-cap
+const { parse, adapter, map, stringify, sequence } = require('@raywhite/pico-dom');
 
 /**
  * Server methods.
@@ -27,13 +29,12 @@ const renderer = new require('markdown-it')({ html: true }); // eslint-disable-l
 const { createError } = micro;
 
 /**
- * Metadata can be iimported directly from `package.json`.
+ * Metadata can be imported directly from `package.json`.
  */
 const { name, description, author, license } = require('../package.json');
 
 /**
- * The default props for document generation are
- * derived from `package.json`.
+ * Constants.
  */
 const DOCUMENT_PROPERTIES = {
   name,
@@ -44,13 +45,10 @@ const DOCUMENT_PROPERTIES = {
   src: 'index.packed.js',
 };
 
-/**
- * Constants for the different directories used
- * in the build process.
- */
 const BASE_DIR = path.join(__dirname, '../');
 const SRC_DIR = path.join(BASE_DIR, 'src');
 const DIST_DIR = path.join(BASE_DIR, 'dist');
+const INDEX_MD = path.join(SRC_DIR, 'index.md');
 
 /**
  * The reporters for stderr and stdout.
@@ -60,6 +58,11 @@ const DIST_DIR = path.join(BASE_DIR, 'dist');
 const [progress, panic] = (function () {
   /**
    * Log to stdout or stderr using the provided colorization.
+   *
+   * TODO: Pass options as a single argument (Object), allowing
+   * for interpolation.
+   *
+   * TODO: Make this a seperate repo.
    *
    * @param {String}
    * @param {String}
@@ -74,7 +77,7 @@ const [progress, panic] = (function () {
   };
 
   /**
-   * A wrapper utility to stderr with red colorization.
+   * A wrapper utility to log to stderr with red colorization.
    *
    * @param {String}
    * @returns {Void}
@@ -124,6 +127,18 @@ const createDocument = (function () {
    */
   const pad = str => `*** ${str} ************************************************************`.slice(0, 64);
 
+  const comment = function (name, author) {
+    return `
+      <!-- ***********************************************************
+      ****************************************************************
+      ${pad(name)}
+      ****************************************************************
+      ${pad(author)}
+      ****************************************************************
+      ************************************************************ -->`
+        .split('\n').map(s => s.trim()).join('\n');
+  };
+
   /**
    * Build the markup for the index / 404 file.
    *
@@ -139,17 +154,15 @@ const createDocument = (function () {
    * @param {String}
    * @returns {String}
    */
-
-  // TODO: Functional version... will break tests, replace return value.
-  function render(props/**, options */) {
+  return function (props/**, options = { live } */) {
     const { content, href, src, name, description, author, license } = props;
-    [content, href, src, name, description, author, license].forEach(function (p) {
-      if (item === undefined) throw new Error(`required property ${p} was undefined`);
-    });
-  }
 
-  return function (content, href, src) {
-     /**
+    // Check that all of the required props exits.
+    [content, href, src, name, description, author, license].forEach(function (p) {
+      if (p === undefined) throw new Error(`required property ${p} was undefined`);
+    });
+
+    /**
      * The JSON-LD metadata to embed into the page.
      *
      * TODO: Potentially add image metadata;
@@ -165,49 +178,58 @@ const createDocument = (function () {
     });
 
     return create(`
-<!-- ***********************************************************
-****************************************************************
-${pad(name)}
-****************************************************************
-${pad(author)}
-****************************************************************
-************************************************************ -->
+      ${comment(name, author)}
 
-<meta property="og:title" content="${name}"/>
-<meta property="og:site_name" content="${name}"/>
-<meta property="og:description" content="${description}"/>
+      <meta property="og:title" content="${name}"/>
+      <meta property="og:site_name" content="${name}"/>
+      <meta property="og:description" content="${description}"/>
 
-<script type="application/ld+json">${JSONLD_SCHEMA}</script>
+      <script type="application/ld+json">${JSONLD_SCHEMA}</script>
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>${name}</title>
+      <title>${name}</title>
 
-<link rel="icon" href="/public/favicon.png" type="image/png">
+      <link rel="icon" href="/public/favicon.png" type="image/png">
 
-<link rel="stylesheet" href="${href}">
+      <link rel="stylesheet" href="${href}">
 
-<!-- TODO: Should the loading of this script be deferred? -->
-<script src="${src}"></script>
+      <!-- TODO: Should the loading of this script be deferred? -->
+      <script src="${src}"></script>
 
-${renderer.render(content)}
+      ${renderer.render(content)}
     `);
-  };
+  }
 }());
+
+/**
+ * Asyncronously read the index markdown file and
+ * generate the index markup document.
+ *
+ * TODO: Add option to pass live thrrough.
+ *
+ * @param {String}
+ * @param {Object}
+ * @param {Object}
+ */
+const createMarkup = async function (file, props/** , options = { live: false } */) {
+  const content = await readFile(file, 'utf8');
+  return createDocument(Object.assign({}, props, { content })/**, options*/);
+};
 
 const createCompiler = (function () {
   /**
    * Creates a webpack compiler instance with
    * the specified config.
    *
-   * TODO: Add compilation options.
+   * TODO: Add compilation options, and sourcemaps.
    *
    * @param {Boolean}
     *
    * @returns {Object}
    */
   return function (/** production = false */) {
-    return webpack({
+    const compiler = webpack({
       entry: path.join(SRC_DIR, 'index.js'),
       output: {
         filename: 'index.packed.js',
@@ -272,8 +294,108 @@ const createCompiler = (function () {
         poll: 512,
       },
     });
+
+    return compiler;
   };
 }());
+
+/**
+ * Creates a webpack compiler instance with
+ * the specified config.
+ *
+ * TODO: Add compilation options, and sourcemaps.
+ *
+ * @param {Object}
+  *
+ * @returns {Object}
+ */
+const _createCompiler = function (options) {
+  const { production = false, fs = null } = options;
+
+  /**
+   * TODO: Source maps (at least prod) appear to be completely broken... no idea
+   * why, but it appears to have something to the extract text plugin.
+   *
+   * This will be solved when switching over to using postcss iteslef for loading
+   * the data.
+   *
+   * let devtool = 'eval-source-map';
+   * devtool = 'hidden-source-map'; // Broken AF... webpack sucks.
+   */
+
+  // Plugins; The differ between dev and production between dev and production.
+  const plugins = [new ExtractTextPlugin('index.packed.css')];
+
+  if (production) plugins.push(new UglifyJSPlugin());
+
+  const compiler = webpack({
+    entry: path.join(SRC_DIR, 'index.js'),
+    output: {
+      filename: 'index.packed.js',
+      path: DIST_DIR,
+      publicPath: ('/public/'),
+    },
+    module: {
+      rules: [
+        {
+          /**
+           * JS is transpiled through babel.
+           */
+          test: /\.js$/,
+          exclude: /(node_modules|bin)/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: ['latest', 'stage-2'],
+              plugins: [
+                /* eslint-disable global-require */
+                require('babel-plugin-transform-class-properties'),
+                require('babel-plugin-transform-object-assign'),
+                require('babel-plugin-transform-es2015-block-scoping'),
+                require('babel-plugin-transform-react-jsx'),
+                /* eslint-enable global-require */
+              ],
+            },
+          },
+        },
+        {
+          /**
+           * CSS setup is simple, it just inlines imports
+           * and applies transformation of future syxntax.
+           */
+          test: /\.css$/,
+          use: ExtractTextPlugin.extract({
+            fallback: 'style-loader',
+            use: [
+              'css-loader',
+              {
+                loader: 'postcss-loader',
+                options: {
+                  // TODO: Add minification to CSS assets (in prod).
+                  plugins: () => [
+                    /* eslint-disable global-require */
+                    require('postcss-import')({}),
+                    require('postcss-cssnext')({}),
+                    /* eslint-enable global-require */
+                  ],
+                },
+              },
+            ],
+          }),
+        },
+      ],
+    },
+    plugins,
+    watchOptions: {
+      aggregateTimeout: 256,
+      poll: 512,
+    },
+  });
+
+
+  if (!production) compiler.outputFileSystem = fs;
+  return compiler;
+};
 
 const createServer = (function () {
   /**
@@ -303,17 +425,9 @@ const createServer = (function () {
     });
   };
 
-  /**
-   * A functional version of `getHeader`.
-   *
-   * @param {Object}
-   * @param {Strinf}
-   * @returns {Void}
-   * @private
-   */
-  const getHeader = function (res, name) { // eslint-disable-line no-shadow, no-unused-vars
-    return res.getHeader(name);
-  };
+
+  // Is there a build running... delay service if that's the case.
+  let scheduled = false;
 
   /**
    * Returns the micro server... we'd need to call listen
@@ -322,20 +436,22 @@ const createServer = (function () {
    * @returns {Object}
    * @private
    */
-  return function () {
+  return function (fs) {
+    // TODO: Accept a websocket connection.
     return micro(async function (req, res) {
       try {
-        // Allow only get requests.
+        // Allow only get requests, trivial attempt to deal with http errors.
         if (req.method !== 'GET') throw createError(405, 'Method Not Allowed');
 
-        const { pathname } = url.parse(req.url);
-
+        // Set the appropriate CORS headers.
         setHeaders(res, {
           'Access-Control-Allow-Headers': '*',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
           'Cache-Control': 'no-cache',
         });
+
+        const { pathname } = url.parse(req.url);
 
         let data;
         switch (pathname) {
@@ -377,14 +493,14 @@ const createServer = (function () {
  * @returns {Promise}
  * @private
  */
-async function build(/** prod */) {
+async function build() {
   progress('running webpack build');
 
   try {
     await Promise.all([
       // Compile the JS using webpack.
       new Promise(function (resolve, reject) {
-        createCompiler().run(function (err, stats) {
+        _createCompiler({ production: true }).run(function (err, stats) {
           if (err) return reject(err);
 
           const info = stats.toJson();
@@ -424,8 +540,9 @@ async function build(/** prod */) {
         progress('generating index document');
 
         try {
-          const content = await readFile('./src/index.md', 'utf-8');
-          const markup = createDocument(content, '/index.packed.css', 'index.packed.js');
+          // TODO: This can likely be moved into constants.
+          const _pathname = path.join(SRC_DIR, 'index.md');
+          const markup = await createMarkup(_pathname, DOCUMENT_PROPERTIES);
           await writeFile('./dist/index.html', markup);
         } catch (err) { throw err; }
 
@@ -531,7 +648,7 @@ const createHandler = function () {
      * TODO: Need to pass an some variable in order to bundle with
      * minimization.
      */
-    '--build:prod': build.bind(null),
+    '--build:prod': build.bind(null/**, production */),
 
     /**
      * Watch the app and build on change, for testing
@@ -543,17 +660,6 @@ const createHandler = function () {
       createServer().listen(p);
       progress(`server listener on port ${p}`);
     },
-
-    /**
-     *  TODO: Serve inside electron and reload... an incremental feature.
-     *
-     * '--serve:interface': function () {
-     * const p = await port(5000);
-     * createCompiler().watch({}, createHandler());
-     * createServer().listen(p);
-     * progress(`server listener on port ${p}`);
-     * },
-     */
   };
 
   const arg = argv.pop();
