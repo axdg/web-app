@@ -3,6 +3,7 @@ const { DefinePlugin } = require('webpack');
 const BabiliPlugin = require('babili-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const cssnext = require('postcss-cssnext');
+const precss = require('precss');
 
 const ROOT = path.join(__dirname, '../');
 const ENTRY_FILE = path.join(ROOT, './src/es', 'index.js');
@@ -61,16 +62,11 @@ module.exports = function (options = {}) {
                 },
               },
               {
-                loader: 'sass-loader',
-                options: {
-                  sourceMap: true,
-                },
-              },
-              {
                 loader: 'postcss-loader',
                 options: {
                   sourceMap: true,
                   plugins: () => [
+                    precss({}),
                     cssnext({
                       warnForDuplicates: false,
                       browsers,

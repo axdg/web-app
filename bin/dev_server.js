@@ -5,7 +5,7 @@ const url = require('url');
 const micro = require('micro');
 const webpack = require('webpack');
 const MemoryFS = require('memory-fs');
-const WEBPACK_CONFIG = require('./dev_webpack.config.js');
+const WEBPACK_CONFIG = require('./create_webpack.config.js')();
 
 // Reset the output path on the webpack config, set the base for service.
 WEBPACK_CONFIG.output.path = '/';
@@ -150,7 +150,10 @@ const createDevServer = function () {
        */
       fn = async function () {
         if (cache._err) return reject(createError(500, 'Webpack Error', cache._err));
-        if (cache._stats.hasErrors()) return reject(createError(500, 'Webpack Build Error'));
+        if (cache._stats.hasErrors()) {
+          console.log(cache._stats);
+          return reject(createError(500, 'Webpack Build Error'));
+        }
         return resolve(await readFileMemory(pathname));
       };
     }());
