@@ -112,8 +112,7 @@ const createDocument = (function () {
       <title>${name}</title>
       <link rel="icon" href="/public/favicon.png" type="image/png">
       <link rel="stylesheet" href="${href}">
-      <!-- TODO: Should the loading of this script be deferred? -->
-      <script src="${src}"></script>
+      <script defer src="${src}"></script>
       ${renderer.render(content)}
     `);
   };

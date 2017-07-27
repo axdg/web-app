@@ -10,7 +10,7 @@
     "lint": "eslint src/es test bin",
     "test": "echo \"Really need to write some tests...\" && exit 1",
     "test:renderer": "echo \"Really need to write some tests...\" && exit 1",
-    "start": "electron ./bin/dev_server.js",
+    "start": "node ./bin/dev_server.js",
     "build:prod": "Not implemented yet"
   },
   "author": "axdg <axdg@dfant.asia>",
@@ -48,7 +48,8 @@
     "postcss-loader": "^1.3.3",
     "precss": "^2.0.0",
     "style-loader": "^0.16.1",
-    "webpack": "^2.7.0"
+    "webpack": "^2.7.0",
+    "ws": "^3.1.0"
   },
   "dependencies": {
     "normalize.css": "^7.0.0"

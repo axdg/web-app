@@ -2,8 +2,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 const url = require('url');
-const { app, BrowserWindow } = require('electron');
 const micro = require('micro');
+const WebSocket = require('ws');
 const webpack = require('webpack');
 const MemoryFS = require('memory-fs');
 const WEBPACK_CONFIG = require('./create_webpack.config.js')();
@@ -15,29 +15,6 @@ const SERVICE_DIR = path.join(__dirname, '../src');
 const INDEX = '/index.html';
 
 const { createError } = micro;
-
-/**
- * Create a data URL from the given data.
- *
- * @param {String|Buffer}
- * @param {String}
- * @param {Boolean}
- * @returns {String}
- */
-const createDataURL = function (data, mime, encode = true) {
-  const _data = encode ? `;base64,${new Buffer(data).toString('base64')}` : `,${data}`;
-  return `data:${mime}${_data}`;
-};
-
-/**
- * Create a data URL for an HTML document.
- *
- * @param {String}
- * @returns {String}
- */
-const createMarkupDataURL = function (markup) {
-  return createDataURL(markup, 'text/html;charset=utf-8');
-};
 
 /**
  * A functional version of `req||res.getHeader`.
@@ -94,7 +71,7 @@ const setHeaders = function (res, headers) {
  *
  * @returns {Void}
  */
-const createDevServer = function (exec) {
+(function () {
   let pending = true;
   const cache = { _err: null, _stats: null };
   const queue = [];
@@ -227,12 +204,19 @@ const createDevServer = function (exec) {
     try {
       d = await listener(req, res);
     } catch (err) {
-      // TODO: Handle errors sensbily.
-      console.log(err.message);
+      // TODO: Handle errors sensibly...
+      console.log(err);
       return null;
     }
+
     return d;
   });
+
+  // Create the websocket server.
+  const wss = new WebSocket.Server({ server });
+  const r = () => wss.clients.forEach(s => s.send('@@APP_RELOAD@@', () => null));
+
+  // TODO: Inject the client script to reload the page.
 
   /**
    * Starve the queue of functions.
@@ -258,60 +242,10 @@ const createDevServer = function (exec) {
     pending = false;
     Object.assign(cache, { _err: err, _stats: stats });
     schedule();
-    return await exec();
   });
 
   // Add compilation lifecycle hooks and listen.
   compiler.plugin('watch-run', tock);
   compiler.plugin('run', tock);
   server.listen(3000);
-};
-
-const createRenderer = (function () {
-  // Global reference to prevent GC.
-  let win;
-
-  /**
-   * TODO: Add `titlebarStyle` of hidden inset.
-   */
-  const WINDOW_OPTIONS = {
-    width: 1024,
-    height: 768,
-    backgroundColor: '#1f3153',
-    show: true,
-    offscreen: true,
-    resizable: true,
-    vibrancy: 'ultra-dark',
-    webPreferences: {
-      webSecurity: false,
-    },
-  };
-
-  /**
-   * Create a `BrowserWindow` with the above options...
-   * opens dev tools, although not detached ATM.
-   *
-   * @returns {Void}
-   */
-  return function () {
-    if (!win) win = new BrowserWindow(WINDOW_OPTIONS);
-    win.webContents.openDevTools({});
-
-    // Window lifecycle listeners.
-    win.on('ready-to-show', () => win.show());
-    win.on('closed', () => win = null); // eslint-disable-line no-return-assign
-
-    return async function () {
-      if (win !== null) {
-        const m = await createMarkup();
-        win.loadURL(createMarkupDataURL(m), { baseURLForDataURL: 'http://localhost:3000/' });
-      }
-    };
-  }
 }());
-
-
-// Application lifecycle listeners.
-app.on('ready', () => createDevServer(createRenderer()));
-app.on('window-all-closed', () => (process.platform !== 'darwin') && app.quit());
-app.on('activate', () => createRenderer());
