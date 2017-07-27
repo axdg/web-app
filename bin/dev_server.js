@@ -111,93 +111,101 @@ const createDevServer = function () {
     });
   };
 
-  // Create the server, set headers.
-  const server = micro(async function (req, res) {
-    try {
-      // CORS headers.
-      setHeaders(res, {
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-        'Cache-Control': 'no-cache',
+  const listener = async function (req, res) {
+    // CORS headers.
+    setHeaders(res, {
+      'Access-Control-Allow-Headers': '*',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET',
+      'Cache-Control': 'no-cache',
+    });
+
+    // Method not allowed and build error handling.
+    if (req.method !== 'GET') throw createError(405, 'Method Not Allowed');
+
+    // Grab the pathname... check the cache;
+    let data = null;
+    let { pathname } = url.parse(req.url);
+    if (pathname === '/') pathname = '/index.html';
+
+    let p;
+    let fn;
+
+    (function () {
+      let resolve;
+      let reject;
+
+      // A `Promise` to await.
+      p = new Promise(function (_resolve, _reject) {
+        resolve = _resolve;
+        reject = _reject;
       });
 
-      // Method not allowed and build error handling.
-      if (req.method !== 'GET') throw createError(405, 'Method Not Allowed');
-
-      // Grab the pathname... check the cache;
-      let data = null;
-      let { pathname } = url.parse(req.url);
-      if (pathname === '/') pathname = '/index.html';
-
-      let p;
-      let fn;
-
-      (function () {
-        let resolve;
-        let reject;
-
-        // A `Promise` to await.
-        p = new Promise(function (_resolve, _reject) {
-          resolve = _resolve;
-          reject = _reject;
-        });
-
-        /**
-         * Called whenever webpack isn't building, resolves
-         * or rejects `p`.
-         *
-         * @returns {Void}
-         */
-        fn = async function () {
-          if (cache._err) return reject(createError(500, 'Webpack Error', cache._err));
-          if (cache._stats.hasErrors()) {
-            const { errors } = cache._stats.toJson();
-            return reject(createError(500, 'Webpack Build Error', errors));
-          }
-          return resolve(await readFileMemory(pathname));
-        };
-      }());
-
-      // All files await a build.
-      !pending ? fn() : queue.push(fn); // eslint-disable-line no-unused-expressions
-      data = await p;
-
-      if (!data) {
-         // Try to read from disk.
-        try {
-          // TODO: Check on the file size and serve a stream where appropriate, accept range headers.
-          data = await readFile(path.join(SERVICE_DIR, path.normalize(pathname)));
-        } catch (err) {
-          // 404... couldn't be found.
-          throw createError(404, 'Not Found');
+      /**
+       * Called whenever webpack isn't building, resolves
+       * or rejects `p`.
+       *
+       * @returns {Void}
+       */
+      fn = async function () {
+        if (cache._err) return reject(createError(500, 'Webpack Error', cache._err));
+        if (cache._stats.hasErrors()) {
+          const { errors } = cache._stats.toJson();
+          return reject(createError(500, 'Webpack Build Error', errors));
         }
-      }
+        return resolve(await readFileMemory(pathname));
+      };
+    }());
 
-      // Set the content type.
-      const extname = path.extname(pathname);
-      switch (extname) {
-        case '.html':
-        case '.htm':
-          setUTFEncodedContentType(res, 'text/html');
-          break;
-        case '.css':
-          setUTFEncodedContentType(res, 'text/css');
-          break;
-        case '.js':
-        case '.es':
-          setUTFEncodedContentType(res, 'application/javascript');
-          break;
-        default:
-          res.setHeader('Content-Type', 'application/octet-stream');
-          break;
-      }
+    // All files await a build.
+    !pending ? fn() : queue.push(fn); // eslint-disable-line no-unused-expressions
+    data = await p;
 
-      if (getHeader(res, 'Content-Type') !== 'application/octet-stream') data = data.toString('utf8');
-      return data;
-    } catch (err) {
-      console.log(err.message);
+    if (!data) {
+       // Try to read from disk.
+      try {
+        // TODO: Check on the file size and serve a stream where appropriate, accept range headers.
+        data = await readFile(path.join(SERVICE_DIR, path.normalize(pathname)));
+      } catch (err) {
+        // 404... couldn't be found.
+        throw createError(404, 'Not Found');
+      }
     }
+
+    // Set the content type.
+    const extname = path.extname(pathname);
+    switch (extname) {
+      case '.html':
+      case '.htm':
+        setUTFEncodedContentType(res, 'text/html');
+        break;
+      case '.css':
+        setUTFEncodedContentType(res, 'text/css');
+        break;
+      case '.js':
+      case '.es':
+        setUTFEncodedContentType(res, 'application/javascript');
+        break;
+      default:
+        res.setHeader('Content-Type', 'application/octet-stream');
+        break;
+    }
+
+    if (getHeader(res, 'Content-Type') !== 'application/octet-stream') data = data.toString('utf8');
+    return data;
+  }
+
+  // Create the server, set headers.
+  const server = micro(async function (req, res) {
+    let d;
+    try {
+      d = await listener(req, res);
+    } catch (err) {
+      // TODO: Handle errors sensbily.
+      console.log(err.message);
+      return null;
+    }
+    return d;
   });
 
   /**
