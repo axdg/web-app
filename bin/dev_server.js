@@ -6,6 +6,7 @@ const micro = require('micro');
 const webpack = require('webpack');
 const MemoryFS = require('memory-fs');
 const WEBPACK_CONFIG = require('./create_webpack.config.js')();
+const createMarkup = require('./create_markup');
 
 // Reset the output path on the webpack config, set the base for service.
 WEBPACK_CONFIG.output.path = '/';
@@ -164,8 +165,10 @@ const createDevServer = function () {
     if (!data) {
        // Try to read from disk.
       try {
-        // TODO: Check on the file size and serve a stream where appropriate, accept range headers.
-        data = await readFile(path.join(SERVICE_DIR, path.normalize(pathname)));
+        // TODO: Check oxn the file size and serve a stream where appropriate, accept range headers.
+        data = pathname !== '/index.html' ?
+          await readFile(path.join(SERVICE_DIR, path.normalize(pathname))) :
+          await createMarkup();
       } catch (err) {
         // 404... couldn't be found.
         throw createError(404, 'Not Found');
@@ -193,7 +196,7 @@ const createDevServer = function () {
 
     if (getHeader(res, 'Content-Type') !== 'application/octet-stream') data = data.toString('utf8');
     return data;
-  }
+  };
 
   // Create the server, set headers.
   const server = micro(async function (req, res) {

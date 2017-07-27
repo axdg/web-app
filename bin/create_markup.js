@@ -1,10 +1,22 @@
-const PACKAGE_CONGIF = require('package.json');
+const path = require('path');
+const { readFile } = require('fs-extra');
+const { parse, stringify, adapter, map, sequence } = require('@raywhite/pico-dom');
+const renderer = new require('markdown-it')({ html: true }); // eslint-disable-line new-cap
+const PACKAGE_CONFIG = require('../package.json');
 
 const createDocument = (function () {
+  /**
+   * Allows all nodes through with the exception of comment
+   * nodes that don't preface the application.
+   *
+   * @param {Object}
+   * @returns {Object}
+   * @private
+   */
   const fn = function (node) {
     if (adapter.isCommentNode(node)) {
       // Add some spacing after the header comment.
-      if (adapter.getCommentNodeContent(node).indexOf(author) !== -1) {
+      if (adapter.getCommentNodeContent(node).indexOf(PACKAGE_CONFIG.author) !== -1) {
         return [node, adapter.createTextNode('\n\n')];
       }
 
@@ -37,7 +49,7 @@ const createDocument = (function () {
    */
   const pad = str => `*** ${str} ************************************************************`.slice(0, 64);
 
-  const comment = function (name, author) {
+  const createComment = function (name, author) {
     return `
       <!-- ***********************************************************
       ****************************************************************
@@ -64,13 +76,16 @@ const createDocument = (function () {
    * @param {String}
    * @returns {String}
    */
-  return function (props/**, options = { live } */) {
-    const { content, href, src, name, description, author, license } = props;
-
-    // Check that all of the required props exits.
-    [content, href, src, name, description, author, license].forEach(function (p) {
-      if (p === undefined) throw new Error(`required property ${p} was undefined`);
-    });
+  return function (options = {}) {
+    const {
+      content = '',
+      href = 'index.css',
+      src = 'index.js',
+      name = PACKAGE_CONFIG.name,
+      description = PACKAGE_CONFIG.description,
+      author = PACKAGE_CONFIG.author,
+      license = PACKAGE_CONFIG.license,
+    } = options;
 
     /**
      * The JSON-LD metadata to embed into the page.
@@ -88,7 +103,7 @@ const createDocument = (function () {
     });
 
     return create(`
-      ${comment(name, author)}
+      ${createComment(name, author)}
       <meta property="og:title" content="${name}"/>
       <meta property="og:site_name" content="${name}"/>
       <meta property="og:description" content="${description}"/>
@@ -101,7 +116,7 @@ const createDocument = (function () {
       <script src="${src}"></script>
       ${renderer.render(content)}
     `);
-  }
+  };
 }());
 
 /**
@@ -114,7 +129,8 @@ const createDocument = (function () {
  * @param {Object}
  * @param {Object}
  */
-const createMarkup = async function (file, props/** , options = { live: false } */) {
+module.exports = async function (file = '', props = {}) {
+  if (!file) file = path.join(__dirname, '../src/index.md');
   const content = await readFile(file, 'utf8');
-  return createDocument(Object.assign({}, props, { content })/**, options*/);
+  return createDocument(Object.assign({}, props, { content }));
 };
