@@ -1,7 +1,7 @@
 /**
  * TODO: Use postcss directly... no need to use webpack.
  */
-require('./index.css');
+require('../css/index.css');
 
 /**
  * Main function.
