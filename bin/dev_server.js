@@ -1,7 +1,8 @@
 // const { spawn } = require('child_process');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const url = require('url');
+const { app, BrowserWindow } = require('electron');
 const micro = require('micro');
 const webpack = require('webpack');
 const MemoryFS = require('memory-fs');
@@ -11,25 +12,31 @@ const createMarkup = require('./create_markup');
 // Reset the output path on the webpack config, set the base for service.
 WEBPACK_CONFIG.output.path = '/';
 const SERVICE_DIR = path.join(__dirname, '../src');
+const INDEX = '/index.html';
 
 const { createError } = micro;
 
 /**
- * Promisified `fs.readFile`.
+ * Create a data URL from the given data.
  *
- * TODO: Use `util.promisify` in node version 8.0.0+
+ * @param {String|Buffer}
+ * @param {String}
+ * @param {Boolean}
+ * @returns {String}
+ */
+const createDataURL = function (data, mime, encode = true) {
+  const _data = encode ? `;base64,${new Buffer(data).toString('base64')}` : `,${data}`;
+  return `data:${mime}${_data}`;
+};
+
+/**
+ * Create a data URL for an HTML document.
  *
  * @param {String}
- * @param {Object|String}
- * @returns {Promise}
+ * @returns {String}
  */
-const readFile = function (path, options) { // eslint-disable-line no-shadow
-  return new Promise(function (resolve, reject) {
-    fs.readFile(path, options, function (err, data) {
-      if (err) return reject(err);
-      return resolve(data);
-    });
-  });
+const createMarkupDataURL = function (markup) {
+  return createDataURL(markup, 'text/html;charset=utf-8');
 };
 
 /**
@@ -87,7 +94,7 @@ const setHeaders = function (res, headers) {
  *
  * @returns {Void}
  */
-const createDevServer = function () {
+const createDevServer = function (exec) {
   let pending = true;
   const cache = { _err: null, _stats: null };
   const queue = [];
@@ -112,6 +119,15 @@ const createDevServer = function () {
     });
   };
 
+  /**
+   * The async request listener... this is required
+   * this is wrapped in a try catch in the micro instance.
+   *
+   * @param {Object}
+   * @param {Object}
+   * @returns {String|Buffer|Stream}
+   * @private
+   */
   const listener = async function (req, res) {
     // CORS headers.
     setHeaders(res, {
@@ -127,7 +143,7 @@ const createDevServer = function () {
     // Grab the pathname... check the cache;
     let data = null;
     let { pathname } = url.parse(req.url);
-    if (pathname === '/') pathname = '/index.html';
+    if (pathname === '/') pathname = INDEX;
 
     let p;
     let fn;
@@ -162,11 +178,18 @@ const createDevServer = function () {
     !pending ? fn() : queue.push(fn); // eslint-disable-line no-unused-expressions
     data = await p;
 
+    /**
+     * If the content isn't being served by webpack, then it's
+     * either going to be a request for the markup or for something
+     * from disk, so just look for it.
+     */
     if (!data) {
-       // Try to read from disk.
       try {
-        // TODO: Check oxn the file size and serve a stream where appropriate, accept range headers.
-        data = pathname !== '/index.html' ?
+        /**
+         * TODO: Check the file size and return a stream where
+         * it's appropriate in this situation.
+         */
+        data = pathname !== INDEX ?
           await readFile(path.join(SERVICE_DIR, path.normalize(pathname))) :
           await createMarkup();
       } catch (err) {
@@ -231,21 +254,64 @@ const createDevServer = function () {
     return true;
   };
 
-  compiler.watch({}, function (err, stats) {
+  compiler.watch({}, async function (err, stats) {
     pending = false;
     Object.assign(cache, { _err: err, _stats: stats });
     schedule();
+    return await exec();
   });
 
   // Add compilation lifecycle hooks and listen.
   compiler.plugin('watch-run', tock);
   compiler.plugin('run', tock);
   server.listen(3000);
-
-  // TODO: Logging to the terminal.
-  // TODO: Spawn the dev interface.
-  // TODO: `node-sass` is preventing us from running everything in the same thread.
 };
 
-// Spin up the environment.
-createDevServer();
+const createRenderer = (function () {
+  // Global reference to prevent GC.
+  let win;
+
+  /**
+   * TODO: Add `titlebarStyle` of hidden inset.
+   */
+  const WINDOW_OPTIONS = {
+    width: 1024,
+    height: 768,
+    backgroundColor: '#1f3153',
+    show: true,
+    offscreen: true,
+    resizable: true,
+    vibrancy: 'ultra-dark',
+    webPreferences: {
+      webSecurity: false,
+    },
+  };
+
+  /**
+   * Create a `BrowserWindow` with the above options...
+   * opens dev tools, although not detached ATM.
+   *
+   * @returns {Void}
+   */
+  return function () {
+    if (!win) win = new BrowserWindow(WINDOW_OPTIONS);
+    win.webContents.openDevTools({});
+
+    // Window lifecycle listeners.
+    win.on('ready-to-show', () => win.show());
+    win.on('closed', () => win = null); // eslint-disable-line no-return-assign
+
+    return async function () {
+      if (win !== null) {
+        const m = await createMarkup();
+        win.loadURL(createMarkupDataURL(m), { baseURLForDataURL: 'http://localhost:3000/' });
+      }
+    };
+  }
+}());
+
+
+// Application lifecycle listeners.
+app.on('ready', () => createDevServer(createRenderer()));
+app.on('window-all-closed', () => (process.platform !== 'darwin') && app.quit());
+app.on('activate', () => createRenderer());
