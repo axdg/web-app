@@ -6,18 +6,17 @@
         "node": true,
         "mocha": true
     },
-    "ecmaFeatures": {
-        "forOf": true,
-        "es6": true
-    },
     "rules": {
         "no-underscore-dangle": 0,
         "no-param-reassign": 0,
         "import/no-extraneous-dependencies" : 0,
-        "import/newline-after-import": 0,
         "prefer-arrow-callback": 0,
         "func-names": 0,
         "no-plusplus": 0,
-        "no-new-require": 0
+        "no-irregular-whitespace": 0,
+        "react/jsx-filename-extension": 0,
+        "react/prefer-stateless-function": 0,
+        "react/no-multi-comp": 0,
+        "react/prop-types": 0
     }
 }

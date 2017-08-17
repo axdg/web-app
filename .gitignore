@@ -1,5 +1,4 @@
-.DS_Store
-node_modules
+.DS_Score
+build/
+node_modules/
 npm-debug.log
-dist
-
