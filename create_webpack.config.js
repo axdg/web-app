@@ -4,6 +4,9 @@ const { readFileSync } = require('fs');
 const { DefinePlugin, optimize: { ModuleConcatenationPlugin } } = require('webpack');
 const BabiliPlugin = require('babili-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const cssvars = require('postcss-simple-vars');
+const cssnext = require('postcss-cssnext');
+const nano = require('cssnano');
 
 const ROOT = path.join(__dirname, './');
 const ENTRY_FILE = path.join(ROOT, './src/es', 'index.es');
@@ -80,9 +83,16 @@ module.exports = function (options = {}) {
                 },
               },
               {
-                loader: 'sass-loader',
+                loader: 'postcss-loader',
                 options: {
                   sourceMap: true,
+                  plugins: () => [
+                    cssvars({}/** TODO: Pass global vars */),
+                    cssnext({
+                      warnForDuplicates: false,
+                      browsers,
+                    }),
+                  ],
                 },
               },
             ],
