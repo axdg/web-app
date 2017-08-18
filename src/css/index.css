@@ -1,2 +1,6 @@
 @import "normalize.css";
 
+html, body {
+  background-color: cornFlowerBlue;
+}
+

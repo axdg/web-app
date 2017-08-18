@@ -1,4 +1,4 @@
-# boilerplate
+# web-app
 
 > A web application boilerplate ;)
 
@@ -19,13 +19,13 @@
 **Application Code**
 
 - `./src/`
-  - `./js/`
-    - `index.js`
-  - `./scss/`
-    - `./index.scss`
+  - `./es/`
+    - `index.es`
+  - `./css/`
+    - `./index.css`
   - `./index.html`
-- `./build`
+- `./dist`
 
 ## License
 
-&bull; **MIT** &copy; conniegiann, 2107 &bull;
+&bull; **MIT** &copy; [axdg](axdg@dfant.asia), 2017 &bull;

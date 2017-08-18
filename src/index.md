@@ -1,6 +1,6 @@
 # web-app
 
-> A minimal web-app boilerplate.
+> A modern web app boilerplate ;)
 
 ## What?
 

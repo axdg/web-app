@@ -1,6 +1,6 @@
 **The MIT License (MIT)**
 
-&copy; conniegiann, 2017
+&copy; [axdg](axdg@dfant.asia), 2017
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

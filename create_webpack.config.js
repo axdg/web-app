@@ -6,8 +6,8 @@ const BabiliPlugin = require('babili-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 const ROOT = path.join(__dirname, './');
-const ENTRY_FILE = path.join(ROOT, './src/js', 'index.js');
-const OUTPUT_DEST = path.join(ROOT, './build');
+const ENTRY_FILE = path.join(ROOT, './src/es', 'index.es');
+const OUTPUT_DEST = path.join(ROOT, './dist');
 
 const BABEL_CONFIG = JSON.parse(readFileSync('./.babelrc', 'utf-8'));
 
