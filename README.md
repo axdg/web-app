@@ -34,4 +34,4 @@
 
 ## License
 
-&bull; **MIT** &copy; [axdg](axdg@dfant.asia), 2017 &bull;
+**MIT** &bull; &copy; [a͒̈ẍ͒d̈͒g̈͒](mailto:axdg@dfant.asia) &bull; 2017 &bull;
