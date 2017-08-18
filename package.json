@@ -6,10 +6,11 @@
   "scripts": {
     "test:es": "echo \"Error: no test specified\" && exit 1",
     "test:eslint": "eslint src *.config.js",
+    "test:suite": "npm run test:eslint && npm run test:es",
     "compile:dev": "webpack-dev-server --config dev_webpack.config.js",
     "compile:prod": "webpack --config prod_webpack.config.js --display-modules false --display-max-modules 0 --progress"
   },
-  "author": "Connie Giannopoulos",
+  "author": "axdg <axdg@dfant.asia>",
   "license": "MIT",
   "devDependencies": {
     "babel": "^6.23.0",

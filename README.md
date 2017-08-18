@@ -26,6 +26,12 @@
   - `./index.html`
 - `./dist`
 
+## TODO
+
+- Create HTTP and WS server.
+- Compile using memory FS.
+- Setup tests... and renderer tests.
+
 ## License
 
 &bull; **MIT** &copy; [axdg](axdg@dfant.asia), 2017 &bull;
