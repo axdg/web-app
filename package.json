@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "A minimal web application boilerplate",
   "main": "index.js",
+  "repository": "https://github.com/axdg/web-app",
   "scripts": {
     "test:es": "echo \"Error: no test specified\" && exit 1",
     "test:eslint": "eslint src *.config.js",
@@ -17,10 +18,9 @@
     "babel-cli": "^6.24.1",
     "babel-core": "^6.25.0",
     "babel-eslint": "^7.2.3",
-    "babel-loader": "^7.1.1",
+    "babel-loader": "^7.1.4",
     "babel-plugin-transform-react-jsx": "^6.24.1",
     "babel-preset-env": "^1.6.0",
-    "babili-webpack-plugin": "^0.1.2",
     "css-loader": "^0.28.4",
     "cssnano": "^3.10.0",
     "eslint": "^4.4.1",
@@ -28,13 +28,14 @@
     "eslint-plugin-import": "^2.7.0",
     "eslint-plugin-jsx-a11y": "^5.1.1",
     "eslint-plugin-react": "^7.2.1",
-    "extract-text-webpack-plugin": "^3.0.0",
+    "mini-css-extract-plugin": "^0.4.0",
     "postcss-cssnext": "^3.0.2",
     "postcss-loader": "^2.0.6",
     "postcss-simple-vars": "^4.0.0",
-    "style-loader": "^0.18.2",
-    "webpack": "^3.5.4",
-    "webpack-dev-server": "^2.7.1"
+    "uglifyjs-webpack-plugin": "^1.2.4",
+    "webpack": "^4.4.1",
+    "webpack-cli": "^2.0.13",
+    "webpack-dev-server": "^3.1.1"
   },
   "dependencies": {
     "normalize.css": "^7.0.0"
