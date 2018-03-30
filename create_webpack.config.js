@@ -2,7 +2,7 @@ const path = require('path');
 const { readFileSync } = require('fs');
 
 const { DefinePlugin, optimize: { ModuleConcatenationPlugin } } = require('webpack');
-const BabiliPlugin = require('babili-webpack-plugin');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const cssvars = require('postcss-simple-vars');
 const cssnext = require('postcss-cssnext');
@@ -43,9 +43,7 @@ module.exports = function (options = {}) {
 
   // ECMAScript plugin setup... style text is extracted, compression in prod.
   const plugins = [
-    new MiniCssExtractPlugin({
-      filename: 'index.css',
-    }),
+    new MiniCssExtractPlugin({ filename: 'index.css' }),
     new DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(env),
       'process.env.WEBPACKED': true,
@@ -60,7 +58,7 @@ module.exports = function (options = {}) {
       },
     };
     plugins.push(
-      new BabiliPlugin({}, { comments: false }),
+      new UglifyJsPlugin({ cache: true, sourceMap: true }),
       new ModuleConcatenationPlugin(),
     );
   }
