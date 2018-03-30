@@ -3,7 +3,7 @@ const { readFileSync } = require('fs');
 
 const { DefinePlugin, optimize: { ModuleConcatenationPlugin } } = require('webpack');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const cssvars = require('postcss-simple-vars');
 const cssnext = require('postcss-cssnext');
 
@@ -13,6 +13,10 @@ const OUTPUT_DEST = path.join(ROOT, './dist');
 
 const BABEL_CONFIG = JSON.parse(readFileSync('./.babelrc', 'utf-8'));
 
+/**
+ * TODO: Allow passing more features... just so that this can be exported
+ * as a standalone for simple applications.
+ */
 module.exports = function (options = {}) {
   const {
     // NOTE: By default we're in development mode.
@@ -54,7 +58,7 @@ module.exports = function (options = {}) {
     devtool = 'hidden-source-map';
     minimize = {
       discardComments: {
-        removeAll: true ,
+        removeAll: true,
       },
     };
     plugins.push(

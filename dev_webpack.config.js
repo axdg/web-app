@@ -1,5 +1,5 @@
 const path = require('path');
-const createConfig = require('./create_webpack.config.js')
+const createConfig = require('./create_webpack.config.js');
 
 const CONTENT_BASE = path.join(__dirname, './src');
 
