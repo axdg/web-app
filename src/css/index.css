@@ -1,5 +1,20 @@
 @import "~normalize.css";
 
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono:100,100i,300,300i,400,500');
+
 html, body {
-  background-color: cornFlowerBlue;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 300;
+  font-size: 14px;
+  background-color: #ffeb3b;
+}
+
+p {
+  margin-top: 64px;
+  margin-left: 64px;
+  margin-bottom: 64px;
+}
+
+a {
+  color: black;
 }

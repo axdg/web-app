@@ -1,0 +1,138 @@
+@import "normalize.css";
+
+/* Font imports */
+@import url('https://fonts.googleapis.com/css?family=Roboto:300,400,400i,500,700');
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono:300,400');
+
+/**
+ * This cascade is based on the system font stack... which is being
+ * used by both medium and github (with slight variations between
+ * the two).
+ */
+
+:root {
+  /* The grid system in use is based around the golden ratio. */
+  --ratio: 1.61803398875;
+  --ratio-em: calc(var(--ratio) * 1em);
+  --ratio-rem: calc(var(--ratio) * 1rem);
+
+  /* Black text + a lighter shade and a blue for interactive text. */
+  --text-primary: color(#000000);
+  --text-secondary: color(var(--text-primary) a(56%));
+
+  /* --text-interactive: color(#0366D6); */
+
+  /* White background + a darker shade. */
+  --bg-primary: color(#FFEB3B);
+  --bg-secondary: color(var(--text-primary) a(4%));
+
+  /* Breakpoints, only three sizes */
+  --bp-ipad: 768px;
+};
+
+* {box-sizing: border-box; margin: 0;}
+
+html, body {
+    /* The system font stack (medium) */
+  font-family: Roboto, sans-serif;
+
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: var(--ratio-rem);
+
+  background-color: var(--bg-primary);
+}
+
+@media (max-width: 768px) {
+  html, body {
+    font-size: 13px;
+  }
+}
+
+pre {
+  padding: var(--ratio-em);
+  margin-bottom: var(--ratio-em);
+  background-color: var(--bg-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+code {
+  /* The monospace system font stack (github) */
+  font-family: 'Roboto Mono', monospace;
+
+  background-color: var(--bg-secondary);
+  font-weight: 400;
+  line-height: var(--ratio-rem);
+  color: var(--text-primary);
+}
+
+pre code {
+  background-color: color(var(--text-primary) a(0%));
+}
+
+/* All headers are bold */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
+  margin: 0rem;
+}
+
+h1 {
+  font-size: calc(3 * var(--ratio-rem) / 1rem / var(--ratio-rem));
+  line-height: calc(3 * var(--ratio-rem));
+}
+
+h2, h3 {
+  font-size: calc(2 * var(--ratio-rem) / 1rem / var(--ratio-rem));
+  line-height: calc(2 * var(--ratio-rem));
+}
+
+h4, h5, h6 {
+  font-size: calc(1 * var(--ratio-rem) / 1rem / var(--ratio-rem));
+  line-height: calc(2 * var(--ratio-rem));
+}
+
+ul {
+  font-size: 1rem;
+  line-height: var(--ratio-em);
+  list-style: none;
+  padding: 0em;
+  margin-bottom: var(--ratio-em);
+}
+
+li {
+  padding-right: 1rem;
+}
+
+li::before {
+  content: '•';
+  padding: 0em 1rem;
+}
+
+blockquote {
+  margin-left: 1rem;
+  border-left: 3px solid var(--bg-secondary);
+}
+
+blockquote p {
+  color: var(--text-secondary);
+  padding: 0em 0em 0em 1rem;
+}
+
+p {
+  margin-bottom: var(--ratio-em);
+}
+
+a {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+strong {
+  font-weight: 500;
+}
+
+em {
+  font-style: italic;
+}

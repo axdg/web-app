@@ -52,7 +52,11 @@ module.exports = function (options = {}) {
 
   if (env === 'production') {
     devtool = 'hidden-source-map';
-    minimize = { discardComments: { removeAll: true } };
+    minimize = {
+      discardComments: {
+        removeAll: true ,
+      },
+    };
     plugins.push(
       new BabiliPlugin({}, { comments: false }),
       new ModuleConcatenationPlugin(),

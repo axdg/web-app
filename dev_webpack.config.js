@@ -1,12 +1,12 @@
 const path = require('path');
+const createConfig = require('./create_webpack.config.js')
 
 const CONTENT_BASE = path.join(__dirname, './src');
 
-// NOTE: The webpack dev server specific options.
 const devServer = {
   contentBase: CONTENT_BASE,
   port: 5000,
-  // NOTE: Stats options are pretty intense... apologies.
+  // hot: true,
   stats: {
     assets: true,
     assetsSort: 'size',
@@ -41,4 +41,4 @@ const devServer = {
   },
 };
 
-module.exports = Object.assign({}, require('./create_webpack.config.js')(), { devServer });
+module.exports = Object.assign({}, createConfig(), { devServer });
