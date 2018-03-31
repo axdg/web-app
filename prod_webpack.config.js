@@ -1,3 +1,3 @@
-const createConfig = require('./create_webpack.config.js');
+const createConfig = require('./create_webpack.config.js')
 
-module.exports = Object.assign({}, createConfig({ env: 'production' }), {});
+module.exports = Object.assign({}, createConfig({ env: 'production' }), {})

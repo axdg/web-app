@@ -1,7 +1,7 @@
-const path = require('path');
-const createConfig = require('./create_webpack.config.js');
+const path = require('path')
+const createConfig = require('./create_webpack.config.js')
 
-const CONTENT_BASE = path.join(__dirname, './src');
+const CONTENT_BASE = path.join(__dirname, './src')
 
 const devServer = {
   contentBase: CONTENT_BASE,
@@ -39,6 +39,6 @@ const devServer = {
     version: false,
     warnings: true,
   },
-};
+}
 
-module.exports = Object.assign({}, createConfig(), { devServer });
+module.exports = Object.assign({}, createConfig(), { devServer })
